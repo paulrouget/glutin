@@ -297,6 +297,21 @@ impl Window {
             None       => { return Err(OsError(format!("Couldn't create NSView"))); },
         };
 
+        unsafe {
+            let frame = NSRect::new(NSPoint::new(0., 0.), NSSize::new(100 as f64, 100 as f64));
+            let nd = NonDraggableView::new();
+            nd.view.initWithFrame_(frame);
+            view.addSubview_(*(nd.view));
+        }
+
+        /*
+        unsafe {
+            let frame = NSRect::new(NSPoint::new(0., 0.), NSSize::new(100 as f64, 100 as f64));
+            let v2 = IdRef::new(NSView::alloc(nil).initWithFrame_(frame));
+            view.addSubview_(*v2);
+        }
+        */
+
         // TODO: perhaps we should return error from create_context so we can
         // determine the cause of failure and possibly recover?
         let (context, pf) = match Window::create_context(*view, pf_reqs, opengl) {
@@ -433,6 +448,7 @@ impl Window {
                 if !attrs.decorations {
                     window.setTitleVisibility_(NSWindowTitleVisibility::NSWindowTitleHidden);
                     window.setTitlebarAppearsTransparent_(YES);
+                    window.setMovableByWindowBackground_(YES);
                 }
 
                 if screen.is_some() {
@@ -925,4 +941,46 @@ unsafe fn NSEventToEvent(window: &Window, nsevent: id) -> Option<Event> {
         },
         _  => { None },
     }
+}
+
+
+struct NonDraggableView {
+    view: IdRef
+}
+
+impl NonDraggableView {
+    fn class() -> *const Class {
+        use std::sync::{Once, ONCE_INIT};
+
+        extern fn mouse_down_can_move_window(this: &Object, _: Sel, _: id) -> BOOL {
+            println!("subclass:mousedowncanmovewindow");
+            NO
+        }
+
+        static mut delegate_class: *const Class = 0 as *const Class;
+        static INIT: Once = ONCE_INIT;
+
+        INIT.call_once(|| unsafe {
+            let superclass = Class::get("NSView").unwrap();
+            let mut decl = ClassDecl::new(superclass, "NonDraggableView").unwrap();
+
+            decl.add_method(sel!(mouseDownCanMoveWindow:),
+                mouse_down_can_move_window as extern fn(&Object, Sel, id) -> BOOL);
+
+
+            delegate_class = decl.register();
+        });
+
+        unsafe {
+            delegate_class
+        }
+    }
+
+    fn new() -> NonDraggableView {
+        unsafe {
+            let viewId = IdRef::new(msg_send![NonDraggableView::class(), new]);
+            NonDraggableView { view: viewId }
+        }
+    }
+
 }

@@ -19,7 +19,7 @@ fn resize_callback(width: u32, height: u32) {
 
 #[cfg(feature = "window")]
 fn main() {
-    let mut window = glutin::WindowBuilder::new().build().unwrap();
+    let mut window = glutin::WindowBuilder::new().with_decorations(false).build().unwrap();
     window.set_title("A fantastic window!");
     window.set_window_resize_callback(Some(resize_callback as fn(u32, u32)));
     unsafe { window.make_current() };
@@ -29,10 +29,10 @@ fn main() {
     let context = support::load(&window);
 
     for event in window.wait_events() {
-        context.draw_frame((0.0, 1.0, 0.0, 1.0));
-        window.swap_buffers();
+        // context.draw_frame((0.0, 1.0, 0.0, 1.0));
+        // window.swap_buffers();
 
-        println!("{:?}", event);
+        // println!("{:?}", event);
 
         match event {
             glutin::Event::Closed => break,
