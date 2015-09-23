@@ -36,6 +36,9 @@ pub enum Event {
     /// An event from the mouse has been received.
     MouseInput(ElementState, MouseButton),
 
+    /// Force Touch event
+    TouchpadPressure(f32),
+
     /// The event loop was woken up by another thread.
     Awakened,
 
