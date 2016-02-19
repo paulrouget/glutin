@@ -44,7 +44,7 @@ use std::sync::Mutex;
 use std::ascii::AsciiExt;
 use std::ops::Deref;
 
-use events::Event::{Awakened, MouseInput, MouseMoved, ReceivedCharacter, KeyboardInput, MouseWheel, Closed, Focused};
+use events::Event::{Awakened, MouseInput, MouseMoved, ReceivedCharacter, KeyboardInput, MouseWheel, Closed, Focused, TouchpadPressure};
 use events::ElementState::{Pressed, Released};
 use events::MouseButton;
 use events;
@@ -222,7 +222,7 @@ impl<'a> Iterator for PollEventsIterator<'a> {
         let event: Option<Event>;
         unsafe {
             let nsevent = NSApp().nextEventMatchingMask_untilDate_inMode_dequeue_(
-                NSAnyEventMask.bits(),
+                NSAnyEventMask.bits() | NSEventMaskPressure.bits(),
                 NSDate::distantPast(nil),
                 NSDefaultRunLoopMode,
                 YES);
@@ -247,7 +247,7 @@ impl<'a> Iterator for WaitEventsIterator<'a> {
         let event: Option<Event>;
         unsafe {
             let nsevent = NSApp().nextEventMatchingMask_untilDate_inMode_dequeue_(
-                NSAnyEventMask.bits(),
+                NSAnyEventMask.bits() | NSEventMaskPressure.bits(),
                 NSDate::distantFuture(nil),
                 NSDefaultRunLoopMode,
                 YES);
@@ -806,7 +806,7 @@ impl Clone for IdRef {
 unsafe fn NSEventToEvent(window: &Window, nsevent: id) -> Option<Event> {
     if nsevent == nil { return None; }
 
-    let event_type = msg_send![nsevent, type];
+    let event_type = nsevent.eventType();
     NSApp().sendEvent_(if let NSKeyDown = event_type { nil } else { nsevent });
 
     match event_type {
@@ -890,6 +890,9 @@ unsafe fn NSEventToEvent(window: &Window, nsevent: id) -> Option<Event> {
                           scale_factor * nsevent.scrollingDeltaY() as f32)
             };
             Some(MouseWheel(delta))
+        },
+        NSEventTypePressure => {
+            Some(TouchpadPressure(nsevent.pressure(), nsevent.stage()))
         },
         _  => { None },
     }
