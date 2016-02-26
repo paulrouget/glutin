@@ -300,6 +300,8 @@ impl Window {
             None       => { return Err(OsError(format!("Couldn't create NSView"))); },
         };
 
+
+
         // TODO: perhaps we should return error from create_context so we can
         // determine the cause of failure and possibly recover?
         let (context, pf) = match Window::create_context(*view, pf_reqs, opengl) {
@@ -329,6 +331,8 @@ impl Window {
             } else {
                 window.makeKeyWindow();
             }
+
+
         }
 
         let ds = DelegateState {
@@ -442,6 +446,14 @@ impl Window {
                 else {
                     window.center();
                 }
+
+                let clo = window.standardWindowButton_(NSWindowButtonKind::NSWindowCloseButton);
+                let min = window.standardWindowButton_(NSWindowButtonKind::NSWindowMiniaturizeButton);
+                let max = window.standardWindowButton_(NSWindowButtonKind::NSWindowZoomButton);
+                clo.setHidden_(YES);
+                min.setHidden_(YES);
+                max.setHidden_(YES);
+
                 window
             })
         }
