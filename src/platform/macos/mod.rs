@@ -11,13 +11,13 @@ use Robustness;
 use WindowAttributes;
 use os::macos::ActivationPolicy;
 
-use objc::runtime::{BOOL, NO};
+use objc::runtime::{BOOL, NO, YES};
 
 use cgl::{CGLEnable, kCGLCECrashOnRemovedFunctions};
 
 use cocoa::base::{id, nil};
-use cocoa::foundation::NSAutoreleasePool;
-use cocoa::appkit::{self, NSOpenGLContext, NSOpenGLPixelFormat};
+use cocoa::foundation::{NSAutoreleasePool, NSPoint, NSSize, NSRect};
+use cocoa::appkit::{self, NSView, NSOpenGLContext, NSOpenGLPixelFormat};
 
 use core_foundation::base::TCFType;
 use core_foundation::string::CFString;
@@ -36,6 +36,8 @@ pub use self::headless::PlatformSpecificHeadlessBuilderAttributes;
 
 mod headless;
 mod helpers;
+
+const TOOLBAR_HEIGHT: f64 = 40.;
 
 #[derive(Clone, Default)]
 pub struct PlatformSpecificWindowBuilderAttributes {
@@ -107,8 +109,21 @@ impl Window {
         }
 
         let winit_window = winit_builder.build().unwrap();
+
         let view = winit_window.get_nsview() as id;
-        let (context, pf) = match Window::create_context(view, pf_reqs, opengl) {
+
+        let mut res = Err(OsError(format!("XXX")));
+
+        unsafe {
+            let (width, height) = winit_window.get_inner_size().expect("XXX");
+            let frame = NSRect::new(NSPoint::new(0., 0.), NSSize::new(width as f64, height as f64 - TOOLBAR_HEIGHT));
+            let subview = NSView::initWithFrame_(NSView::alloc(nil), frame);
+            subview.setWantsBestResolutionOpenGLSurface_(YES);
+            view.addSubview_(subview);
+            res = Window::create_context(subview, pf_reqs, opengl);
+        }
+
+        let (context, pf) = match res {
             Ok((context, pf)) => (context, pf),
             Err(e) => {
                 return Err(OsError(format!("Couldn't create OpenGL context: {}", e)));
