@@ -99,7 +99,7 @@ use self::ffi::{
     CGFloat
  };
 
-
+#[allow(non_upper_case_globals)]
 static mut jmpbuf: [libc::c_int;27] = [0;27];
 
 #[derive(Clone)]
@@ -180,14 +180,14 @@ pub struct PlatformSpecificWindowBuilderAttributes;
 
 impl Window {
 
-    pub fn new(builder: &WindowAttributes, _: &PixelFormatRequirements, _: &GlAttributes<&Window>,
+    pub fn new(win_attribs: &WindowAttributes, _: &PixelFormatRequirements, _: &GlAttributes<&Window>,
                _: &PlatformSpecificWindowBuilderAttributes) -> Result<Window, CreationError>
     {
         unsafe {
             if setjmp(mem::transmute(&mut jmpbuf)) != 0 {
                 let app: id = msg_send![Class::get("UIApplication").unwrap(), sharedApplication];
                 let delegate: id = msg_send![app, delegate];
-                let state: *mut libc::c_void = *(&*delegate).get_ivar("glutinState");
+                let state: *mut os::raw::c_void = *(&*delegate).get_ivar("glutinState");
                 let state = state as *mut DelegateState;
 
                 let context = Window::create_context();
@@ -197,8 +197,7 @@ impl Window {
                     delegate_state: state
                 };
 
-                window.init_context(builder);
-
+                window.init_context(win_attribs);
                 return Ok(window)
             }
         }
@@ -238,8 +237,7 @@ impl Window {
         let layer: id = msg_send![state.view, layer];
         let _: () = msg_send![layer, setContentsScale:state.scale as CGFloat];
         let _: () = msg_send![layer, setDrawableProperties: draw_props];
-
-        let gl = gles::Gles2::load_with(|symbol| self.get_proc_address(symbol));
+        let gl = gles::Gles2::load_with(|symbol| self.get_proc_address(symbol) as *const _);
         let mut color_render_buf: gles::types::GLuint = 0;
         let mut frame_buf: gles::types::GLuint = 0;
         gl.GenRenderbuffers(1, &mut color_render_buf);
@@ -326,12 +324,12 @@ impl Window {
     }
 
     #[inline]
-    pub fn platform_display(&self) -> *mut libc::c_void {
+    pub fn platform_display(&self) -> *mut c_void {
         unimplemented!();
     }
 
     #[inline]
-    pub fn platform_window(&self) -> *mut libc::c_void {
+    pub fn platform_window(&self) -> *mut c_void {
         unimplemented!()
     }
 
@@ -393,7 +391,7 @@ impl GlContext for Window {
         let path = CString::new("/System/Library/Frameworks/OpenGLES.framework/OpenGLES").unwrap();
         unsafe {
             let lib = dlopen(path.as_ptr(), RTLD_LAZY | RTLD_GLOBAL);
-            dlsym(lib, addr_c.as_ptr()) as *const _
+            dlsym(lib, addr_c.as_ptr()) as *const ()
         }
     }
 
