@@ -34,6 +34,7 @@ fn main() {
         .with_dimensions(LogicalSize::from_physical(size, 1.0));
     let windowed_context = glutin::ContextBuilder::new()
         .with_shared_lists(&headless_context)
+        .with_vsync(true)
         .build_windowed(wb, &el)
         .unwrap();
 

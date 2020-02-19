@@ -1,4 +1,5 @@
 mod support;
+use time::precise_time_ns;
 
 fn main() {
     let mut el = glutin::EventsLoop::new();
@@ -18,9 +19,13 @@ fn main() {
     let gl = support::load(&windowed_context.context());
 
     let mut running = true;
+    let mut last = precise_time_ns();
+    let mut fps = 0;
+    let mut v = 0.3;
+    let mut dir = 1.;
     while running {
         el.poll_events(|event| {
-            println!("{:?}", event);
+            // println!("{:?}", event);
             match event {
                 glutin::Event::WindowEvent { event, .. } => match event {
                     glutin::WindowEvent::CloseRequested => running = false,
@@ -36,7 +41,18 @@ fn main() {
             }
         });
 
-        gl.draw_frame([1.0, 0.5, 0.7, 1.0]);
+        gl.draw_frame([1.0, v, 0.7, 1.0]);
         windowed_context.swap_buffers().unwrap();
+        v += 0.001 * dir;
+        fps += 1;
+
+        let now = precise_time_ns();
+        if now - last > 1_000_000_000 {
+            last = now;
+            println!("FPS: {}", fps);
+            fps = 0;
+            dir = -1.0 * dir;
+        }
+
     }
 }
